@@ -191,6 +191,22 @@ cython_debug/
 # Ruff stuff:
 .ruff_cache/
 
+# Template sentinel
+.initialized
+
+# Local env
+.env
+.env.local
+
+# Static / media
+staticfiles/
+media/
+
+# Coverage
+.coverage
+coverage.xml
+htmlcov/
+
 # PyPI configuration file
 .pypirc
 
