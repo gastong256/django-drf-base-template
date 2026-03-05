@@ -1,0 +1,114 @@
+name: Template Validation
+
+on:
+  push:
+    branches-ignore:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-template:
+    name: Validate template in temp workspace
+    if: ${{ !hashFiles('.initialized') }}
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: template_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.4.*"
+
+      - name: Bootstrap template in temp directory
+        env:
+          PROJECT_NAME: "Template Test"
+          PROJECT_SLUG: "template_test"
+          SERVICE_NAME: "template-test"
+          OWNER: "ci-bot"
+          DESCRIPTION: "CI template validation"
+          PORT: "8000"
+          BOOTSTRAP_SKIP_SYNC: "true"
+        run: |
+          rm -rf /tmp/template-validation
+          cp -R "$GITHUB_WORKSPACE" /tmp/template-validation
+          cd /tmp/template-validation
+          bash scripts/bootstrap.sh
+
+      - name: Install deps
+        run: |
+          cd /tmp/template-validation
+          uv sync
+
+      - name: Ensure placeholders are gone
+        run: |
+          cd /tmp/template-validation
+          if grep -R -n -E "__PROJECT_NAME__|__PROJECT_SLUG__|__SERVICE_NAME__|__OWNER__|__DESCRIPTION__|__PORT__" \
+            --exclude-dir=.git --exclude-dir=.venv --exclude-dir=__pycache__ .; then
+            echo "Found unresolved placeholders after bootstrap"
+            exit 1
+          fi
+
+      - name: Lint
+        run: |
+          cd /tmp/template-validation
+          uv run ruff check .
+
+      - name: Format check
+        run: |
+          cd /tmp/template-validation
+          uv run black --check .
+
+      - name: Typecheck
+        run: |
+          cd /tmp/template-validation
+          uv run pyright
+
+      - name: Security scan
+        run: |
+          cd /tmp/template-validation
+          uv run bandit -c pyproject.toml -r apps config
+
+      - name: Check pending migrations
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/template_test
+        run: |
+          cd /tmp/template-validation
+          uv run python manage.py makemigrations --check --dry-run
+
+      - name: Django deploy checks
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.prod
+          DJANGO_SECRET_KEY: ci-deploy-check-secret
+          DJANGO_ALLOWED_HOSTS: api.example.com
+          CSRF_TRUSTED_ORIGINS: https://api.example.com
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/template_test
+        run: |
+          cd /tmp/template-validation
+          uv run python manage.py check --deploy --fail-level WARNING
+
+      - name: Run tests
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/template_test
+        run: |
+          cd /tmp/template-validation
+          uv run pytest

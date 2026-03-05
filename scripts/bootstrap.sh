@@ -113,6 +113,70 @@ replace_in_files "__OWNER__"             "$OWNER"
 replace_in_files "__DESCRIPTION__"       "$DESCRIPTION"
 replace_in_files "__PORT__"              "$PORT"
 
+cleanup_makefile() {
+    local file="Makefile"
+    [[ -f "$file" ]] || return 0
+
+    awk '
+      BEGIN {skip_init=0}
+      {
+        if ($0 ~ /^\.PHONY:/) {
+          gsub(/ init/, "", $0)
+          gsub(/[[:space:]]+$/, "", $0)
+          print $0
+          next
+        }
+
+        if ($0 ~ /^init:[[:space:]]*## /) {
+          skip_init=1
+          next
+        }
+
+        if (skip_init) {
+          if ($0 ~ /^[a-zA-Z_-]+:[[:space:]]*## /) {
+            skip_init=0
+            print $0
+          }
+          next
+        }
+
+        print $0
+      }
+    ' "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
+}
+
+cleanup_readme_template_section() {
+    local file="README.md"
+    [[ -f "$file" ]] || return 0
+
+    awk '
+      BEGIN {skip_section=0}
+      $0 == "- [Using This Template](#using-this-template)" {next}
+      $0 == "## Using This Template" {skip_section=1; next}
+      skip_section && $0 ~ /^## / {skip_section=0}
+      !skip_section {print}
+    ' "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
+}
+
+cleanup_template_artifacts() {
+    local files=(
+        "scripts/bootstrap.sh"
+        ".github/workflows/template-only.yml"
+    )
+
+    echo ""
+    echo "Cleaning template-only artifacts..."
+    cleanup_makefile
+    cleanup_readme_template_section
+
+    for file in "${files[@]}"; do
+        if [[ -f "$file" ]]; then
+            rm -f "$file"
+            echo "  removed: $file"
+        fi
+    done
+}
+
 # ── Rename postman files ──────────────────────────────────────────────────────
 if ls postman/__PROJECT_SLUG__*.json &>/dev/null 2>&1; then
     :  # Already replaced above — nothing to rename
@@ -140,6 +204,7 @@ echo "timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$SENTINEL"
 # ── Install deps ──────────────────────────────────────────────────────────────
 BOOTSTRAP_SKIP_SYNC="${BOOTSTRAP_SKIP_SYNC:-false}"
 BOOTSTRAP_SKIP_PRE_COMMIT="${BOOTSTRAP_SKIP_PRE_COMMIT:-false}"
+BOOTSTRAP_CLEAN_TEMPLATE="${BOOTSTRAP_CLEAN_TEMPLATE:-true}"
 
 echo ""
 if [[ "$BOOTSTRAP_SKIP_SYNC" == "true" ]]; then
@@ -162,6 +227,12 @@ elif [[ "$BOOTSTRAP_SKIP_SYNC" == "true" ]]; then
 elif command -v uv &>/dev/null; then
     echo "Installing pre-commit hooks..."
     uv run pre-commit install
+fi
+
+if [[ "$BOOTSTRAP_CLEAN_TEMPLATE" == "true" ]]; then
+    cleanup_template_artifacts
+else
+    echo "Skipping template artifact cleanup (BOOTSTRAP_CLEAN_TEMPLATE=false)."
 fi
 
 echo ""

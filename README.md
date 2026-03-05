@@ -39,6 +39,7 @@ make init
 `make init` prompts for project details, replaces all placeholders, renames files, installs dependencies, and sets up pre-commit hooks. After it completes the project is immediately runnable.
 
 For offline/air-gapped initialization, run `BOOTSTRAP_SKIP_SYNC=true make init` and install dependencies later with `uv sync`.
+By default, `make init` also removes template-only artifacts (bootstrap script and template-only CI workflow) so the generated repository starts clean.
 
 ---
 
