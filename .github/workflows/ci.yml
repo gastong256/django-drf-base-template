@@ -20,7 +20,7 @@ jobs:
     outputs:
       initialized: ${{ steps.check.outputs.initialized }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - id: check
         run: |
           if grep -q "__PROJECT_SLUG__" pyproject.toml; then
@@ -49,7 +49,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: astral-sh/setup-uv@v3
         with:
