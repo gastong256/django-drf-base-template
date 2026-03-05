@@ -5,7 +5,13 @@ from typing import Any, cast
 from django.conf import settings
 from django.http import Http404, HttpRequest, HttpResponse
 from drf_spectacular.utils import extend_schema
-from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, REGISTRY, generate_latest
+from prometheus_client import (
+    CONTENT_TYPE_LATEST,
+    Counter,
+    Histogram,
+    REGISTRY,
+    generate_latest,
+)
 from rest_framework.permissions import BasePermission
 from rest_framework.request import Request
 from rest_framework.views import APIView

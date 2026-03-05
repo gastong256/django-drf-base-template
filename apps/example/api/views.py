@@ -9,7 +9,12 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.accounts.permissions import HasAnyRole, ROLE_ADMIN, ROLE_READER, ROLE_WRITER
+from apps.accounts.permissions import (
+    HasAnyRole,
+    ROLE_ADMIN,
+    ROLE_READER,
+    ROLE_WRITER,
+)
 from apps.example import selectors, services
 from apps.example.api.serializers import ItemCreateSerializer, ItemSerializer
 from apps.example.models import Item
