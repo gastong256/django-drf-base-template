@@ -1,9 +1,11 @@
 import uuid
 
 import pytest
+from django.contrib.auth.models import Group
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from apps.accounts.permissions import ROLE_READER
 from apps.example.models import Item
 from apps.tenants.models import Tenant
 from config.context import tenant_id_var
@@ -71,6 +73,14 @@ class TestItemCreateEndpoint:
         assert "id" in data
         assert "created_at" in data
 
+    def test_forbidden_without_writer_role(
+        self, api_client: APIClient, django_user_model: type
+    ) -> None:
+        user = django_user_model.objects.create_user(username="norole", password="pass")
+        api_client.force_authenticate(user=user)
+        response = api_client.post(self.url, {"name": "Blocked"}, format="json")
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
     def test_persists_to_db(self, authenticated_client: APIClient) -> None:
         authenticated_client.post(self.url, {"name": "Stored"}, format="json")
         assert Item.objects.filter(name="Stored").exists()
@@ -118,6 +128,16 @@ class TestItemDetailEndpoint:
         data = response.json()
         assert str(data["id"]) == str(item.pk)
         assert data["name"] == "Existing"
+
+    def test_reader_role_can_get_item(self, api_client: APIClient, django_user_model: type) -> None:
+        reader_group, _ = Group.objects.get_or_create(name=ROLE_READER)
+        user = django_user_model.objects.create_user(username="reader", password="pass")
+        user.groups.add(reader_group)
+        api_client.force_authenticate(user=user)
+
+        item = self._create_item()
+        response = api_client.get(f"/api/v1/items/{item.pk}")
+        assert response.status_code == status.HTTP_200_OK
 
     def test_returns_404_for_unknown_id(self, authenticated_client: APIClient) -> None:
         response = authenticated_client.get(f"/api/v1/items/{uuid.uuid4()}")
@@ -182,3 +202,27 @@ class TestAuthTokenEndpoints:
 
         assert refresh_response.status_code == status.HTTP_200_OK
         assert "access" in refresh_response.json()
+
+    def test_me_endpoint_returns_current_user(self, api_client: APIClient, django_user_model: type) -> None:
+        username = "meuser"
+        password = "strong-pass-123"
+        django_user_model.objects.create_user(username=username, password=password)
+
+        token_response = api_client.post(
+            "/api/v1/auth/token",
+            {"username": username, "password": password},
+            format="json",
+        )
+        access = token_response.json()["access"]
+
+        me_response = api_client.get(
+            "/api/v1/auth/me",
+            HTTP_AUTHORIZATION=f"Bearer {access}",
+        )
+
+        assert me_response.status_code == status.HTTP_200_OK
+        assert me_response.json()["username"] == username
+
+    def test_me_endpoint_requires_authentication(self, api_client: APIClient) -> None:
+        response = api_client.get("/api/v1/auth/me")
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED

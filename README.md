@@ -66,6 +66,12 @@ curl http://localhost:__PORT__/api/v1/ping
 # Create a local API user once (idempotent)
 uv run python manage.py shell -c "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.filter(username='apiuser').exists() or User.objects.create_user('apiuser', password='change-me')"
 
+# Bootstrap default API roles and grant model permissions
+uv run python manage.py bootstrap_roles
+
+# Assign writer role to apiuser
+uv run python manage.py shell -c "from django.contrib.auth import get_user_model; from django.contrib.auth.models import Group; user = get_user_model().objects.get(username='apiuser'); user.groups.add(Group.objects.get(name='api_writer'))"
+
 # Obtain JWT token pair
 TOKEN=$(curl -s -X POST http://localhost:__PORT__/api/v1/auth/token \
   -H "Content-Type: application/json" \
@@ -79,6 +85,9 @@ curl -s -X POST http://localhost:__PORT__/api/v1/items \
 
 # Retrieve an item (replace <id> with the UUID from above)
 curl -H "Authorization: Bearer $TOKEN" http://localhost:__PORT__/api/v1/items/<id>
+
+# Get current user profile + roles
+curl -H "Authorization: Bearer $TOKEN" http://localhost:__PORT__/api/v1/auth/me
 ```
 
 ---
@@ -123,6 +132,7 @@ The Postman collection and environment are in `postman/`.
 
 ```
 apps/               Bounded-context Django apps
+  accounts/         Custom user model (UUID), auth endpoints, role permissions
   tenants/          Tenant model + tenant-aware base classes/managers
   example/          Reference implementation — copy this pattern for new apps
     api/            HTTP layer: serializers, views, urls
