@@ -121,9 +121,14 @@ cleanup_makefile() {
       BEGIN {skip_init=0}
       {
         if ($0 ~ /^\.PHONY:/) {
-          gsub(/ init/, "", $0)
-          gsub(/[[:space:]]+$/, "", $0)
-          print $0
+          n = split($0, parts, /[[:space:]]+/)
+          out = parts[1]
+          for (i = 2; i <= n; i++) {
+            if (parts[i] != "" && parts[i] != "init") {
+              out = out " " parts[i]
+            }
+          }
+          print out
           next
         }
 

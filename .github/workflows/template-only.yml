@@ -2,8 +2,6 @@ name: Template Validation
 
 on:
   push:
-    branches-ignore:
-      - main
   pull_request:
 
 permissions:

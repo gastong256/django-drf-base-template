@@ -41,6 +41,7 @@ make init
 For offline/air-gapped initialization, run `BOOTSTRAP_SKIP_SYNC=true make init` and install dependencies later with `uv sync`.
 By default, `make init` also removes template-only artifacts (bootstrap script and template-only CI workflow) so the generated repository starts clean.
 Set `BOOTSTRAP_CLEAN_TEMPLATE=false` only if you explicitly want to keep template maintenance artifacts.
+If you initialized with incorrect values and bootstrap was cleaned, restore `scripts/bootstrap.sh` from git history (or reclone from template) and run it again.
 
 ---
 
