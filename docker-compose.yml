@@ -12,9 +12,38 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.local
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/__PROJECT_SLUG__
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
       DJANGO_SECRET_KEY: local-dev-secret-key-change-me
       DJANGO_DEBUG: "true"
       LOG_LEVEL: DEBUG
+      JSON_LOGS: "false"
+      READINESS_CHECK_REDIS: "false"
+    env_file:
+      - path: .env
+        required: false
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      target: builder
+    command: uv run celery -A config worker -l INFO --concurrency=2
+    volumes:
+      - .:/app
+    working_dir: /app
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.local
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/__PROJECT_SLUG__
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      DJANGO_SECRET_KEY: local-dev-secret-key-change-me
+      DJANGO_DEBUG: "true"
+      LOG_LEVEL: INFO
       JSON_LOGS: "false"
     env_file:
       - path: .env
@@ -22,6 +51,67 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - worker
+
+  beat:
+    build:
+      context: .
+      target: builder
+    command: uv run celery -A config beat -l INFO
+    volumes:
+      - .:/app
+    working_dir: /app
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.local
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/__PROJECT_SLUG__
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      DJANGO_SECRET_KEY: local-dev-secret-key-change-me
+      DJANGO_DEBUG: "true"
+      LOG_LEVEL: INFO
+      JSON_LOGS: "false"
+    env_file:
+      - path: .env
+        required: false
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - worker
+
+  flower:
+    build:
+      context: .
+      target: builder
+    command: uv run celery -A config flower --port=5555
+    volumes:
+      - .:/app
+    working_dir: /app
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.local
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      DJANGO_SECRET_KEY: local-dev-secret-key-change-me
+      DJANGO_DEBUG: "true"
+      LOG_LEVEL: INFO
+      JSON_LOGS: "false"
+    ports:
+      - "5555:5555"
+    env_file:
+      - path: .env
+        required: false
+    depends_on:
+      redis:
+        condition: service_healthy
+    profiles:
+      - flower
 
   postgres:
     image: postgres:16-alpine
@@ -43,8 +133,15 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     profiles:
       - redis
+      - worker
+      - flower
 
 volumes:
   postgres_data:

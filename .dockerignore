@@ -20,6 +20,7 @@ coverage.xml
 docs/
 postman/
 scripts/
+!scripts/start-gunicorn.sh
 tests/
 *.md
 !README.md

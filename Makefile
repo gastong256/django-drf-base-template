@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help init run test lint format typecheck migrate makemigrations shell docker-build
+.PHONY: help init run test lint format typecheck migrate makemigrations shell docker-build celery-worker celery-beat celery-flower
 
 PYTHON := uv run python
 MANAGE := $(PYTHON) manage.py
@@ -12,6 +12,15 @@ init: ## Bootstrap project: replace placeholders, install deps + pre-commit hook
 
 run: ## Start local development server
 	$(MANAGE) runserver 0.0.0.0:$${PORT:-8000}
+
+celery-worker: ## Start Celery worker
+	uv run celery -A config worker -l INFO --concurrency=$${CELERY_CONCURRENCY:-2}
+
+celery-beat: ## Start Celery beat scheduler
+	uv run celery -A config beat -l INFO
+
+celery-flower: ## Start Flower UI for Celery
+	uv run celery -A config flower --port=$${FLOWER_PORT:-5555}
 
 test: ## Run test suite
 	uv run pytest $(ARGS)
@@ -54,6 +63,12 @@ docker-build: ## Build production Docker image
 
 docker-up: ## Start docker-compose services
 	docker compose up -d
+
+docker-up-worker: ## Start web + postgres + redis + worker + beat
+	docker compose --profile worker up -d
+
+docker-up-flower: ## Start Flower + dependencies
+	docker compose --profile flower up -d
 
 docker-down: ## Stop docker-compose services
 	docker compose down

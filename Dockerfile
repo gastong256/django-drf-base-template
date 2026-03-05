@@ -27,19 +27,14 @@ COPY --from=builder /build/.venv .venv
 
 COPY apps/ apps/
 COPY config/ config/
+COPY scripts/start-gunicorn.sh scripts/start-gunicorn.sh
 COPY manage.py .
 
-RUN chown -R appuser:appgroup /app
+RUN chmod +x scripts/start-gunicorn.sh \
+    && chown -R appuser:appgroup /app
 
 USER appuser
 
 EXPOSE __PORT__
 
-CMD ["gunicorn", \
-     "--bind", "0.0.0.0:__PORT__", \
-     "--workers", "2", \
-     "--worker-class", "sync", \
-     "--timeout", "30", \
-     "--access-logfile", "-", \
-     "--error-logfile", "-", \
-     "config.wsgi:application"]
+CMD ["./scripts/start-gunicorn.sh"]

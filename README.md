@@ -17,6 +17,7 @@
 - [Observability](#observability)
 - [Multi-tenancy](#multi-tenancy)
 - [OpenTelemetry](#opentelemetry)
+- [Async Workers & HA](#async-workers--ha)
 - [Releases & Conventional Commits](#releases--conventional-commits)
 - [Contributing](#contributing)
 
@@ -43,6 +44,9 @@ make init
 ```bash
 # 1. Start the database
 docker compose up -d postgres
+
+# Optional: start redis if you enable READINESS_CHECK_REDIS or run Celery
+docker compose --profile redis up -d redis
 
 # 2. Apply migrations
 make migrate
@@ -104,6 +108,9 @@ make shell         # Django shell
 make migrate       # apply migrations
 make makemigrations ARGS="example"  # create migrations for an app
 make pre-commit    # run all pre-commit hooks
+make celery-worker # run worker
+make celery-beat   # run scheduler
+make celery-flower # run Flower UI
 ```
 
 **Adding a new app:**
@@ -139,6 +146,7 @@ apps/               Bounded-context Django apps
     models.py       Data model
     services.py     Write-side business logic
     selectors.py    Read-side query logic
+    tasks.py        Async task examples (Celery)
 config/             Django project (not an app)
   middleware/       RequestID + Tenant middleware
   settings/         base / local / test / prod
@@ -150,6 +158,7 @@ docs/adr/           Architecture Decision Records
 tests/              Top-level pytest suite
 scripts/            Tooling scripts
 postman/            Postman collection + environment
+deploy/k8s/         Kubernetes baseline manifests (web/worker/beat/HPA/PDB/Ingress)
 ```
 
 ---
@@ -176,7 +185,7 @@ See [docs/observability.md](docs/observability.md) for full details.
 
 - **Logs**: JSON to stdout (structlog). Every record includes `request_id` and `tenant_id`.
 - **Request ID**: `X-Request-ID` header, auto-generated if missing, echoed in response.
-- **Health**: `GET /healthz` (liveness), `GET /readyz` (readiness + DB check).
+- **Health**: `GET /healthz` (liveness), `GET /readyz` (readiness + DB + optional Redis check).
 
 ---
 
@@ -202,6 +211,17 @@ export OTEL_ENABLED=true
 export OTEL_SERVICE_NAME=__SERVICE_NAME__
 export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
 ```
+
+---
+
+## Async Workers & HA
+
+- Celery app is configured under `config/celery.py` and discovers tasks automatically.
+- Docker Compose profiles:
+  - `docker compose --profile worker up -d` starts worker + beat + redis.
+  - `docker compose --profile flower up -d` starts Flower UI (port `5555`).
+- Production gunicorn can be tuned via env vars (`GUNICORN_WORKERS`, `GUNICORN_THREADS`, `GUNICORN_MAX_REQUESTS`, etc.).
+- Kubernetes baseline manifests are available in `deploy/k8s/`.
 
 ---
 

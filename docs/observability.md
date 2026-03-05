@@ -65,10 +65,10 @@ The setup is in `config/otel.py` and is a no-op when disabled — no import erro
 
 ## Health Endpoints
 
-| Endpoint  | Purpose                  | Checks DB |
-|-----------|--------------------------|-----------|
-| `GET /healthz` | Liveness — process alive | No |
-| `GET /readyz`  | Readiness — ready to serve traffic | Yes |
+| Endpoint  | Purpose                  | Checks DB | Checks Redis |
+|-----------|--------------------------|-----------|--------------|
+| `GET /healthz` | Liveness — process alive | No | No |
+| `GET /readyz`  | Readiness — ready to serve traffic | Yes | Optional (`READINESS_CHECK_REDIS=true`) |
 
 Use `readyz` in Kubernetes `readinessProbe` and `healthz` in `livenessProbe`.
 

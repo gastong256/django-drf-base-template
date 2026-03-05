@@ -1,5 +1,7 @@
+import redis
 import structlog
 
+from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
@@ -55,6 +57,28 @@ class ReadinessView(APIView):
                 {"status": "unavailable", "detail": "Database unavailable."},
                 status=503,
             )
+
+        if settings.READINESS_CHECK_REDIS:
+            if not settings.REDIS_URL:
+                logger.error("readiness_redis_not_configured")
+                return Response(
+                    {"status": "unavailable", "detail": "Redis unavailable."},
+                    status=503,
+                )
+
+            try:
+                redis_client = redis.Redis.from_url(
+                    settings.REDIS_URL,
+                    socket_connect_timeout=settings.READINESS_REDIS_TIMEOUT_SECONDS,
+                    socket_timeout=settings.READINESS_REDIS_TIMEOUT_SECONDS,
+                )
+                redis_client.ping()
+            except Exception:
+                logger.exception("readiness_redis_check_failed")
+                return Response(
+                    {"status": "unavailable", "detail": "Redis unavailable."},
+                    status=503,
+                )
 
         return Response({"status": "ok"})
 
