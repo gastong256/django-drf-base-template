@@ -31,6 +31,14 @@ env = environ.Env(
     CELERY_RESULT_BACKEND=(str, ""),
     READINESS_CHECK_REDIS=(bool, False),
     READINESS_REDIS_TIMEOUT_SECONDS=(int, 2),
+    DB_CONN_MAX_AGE=(int, 60),
+    DB_CONN_HEALTH_CHECKS=(bool, True),
+    DB_CONNECT_TIMEOUT_SECONDS=(int, 5),
+    DB_STATEMENT_TIMEOUT_MS=(int, 0),
+    CELERY_CONCURRENCY=(int, 2),
+    CELERY_MAX_TASKS_PER_CHILD=(int, 1000),
+    CELERY_TASK_SOFT_TIME_LIMIT_SECONDS=(int, 300),
+    CELERY_TASK_TIME_LIMIT_SECONDS=(int, 360),
 )
 
 environ.Env.read_env(BASE_DIR / ".env", overwrite=False)
@@ -108,7 +116,21 @@ ASGI_APPLICATION = "config.asgi.application"
 DATABASES = {
     "default": env.db("DATABASE_URL", default="sqlite:///db.sqlite3"),
 }
-DATABASES["default"]["CONN_MAX_AGE"] = env.int("DB_CONN_MAX_AGE", default=60)
+DATABASES["default"]["CONN_MAX_AGE"] = env("DB_CONN_MAX_AGE")
+DATABASES["default"]["CONN_HEALTH_CHECKS"] = env("DB_CONN_HEALTH_CHECKS")
+
+if "postgresql" in DATABASES["default"]["ENGINE"]:
+    db_options = DATABASES["default"].setdefault("OPTIONS", {})
+    db_connect_timeout = env("DB_CONNECT_TIMEOUT_SECONDS")
+    if db_connect_timeout > 0:
+        db_options.setdefault("connect_timeout", db_connect_timeout)
+
+    db_statement_timeout_ms = env("DB_STATEMENT_TIMEOUT_MS")
+    if db_statement_timeout_ms > 0:
+        statement_timeout_option = f"-c statement_timeout={db_statement_timeout_ms}"
+        existing_options = db_options.get("options", "")
+        if statement_timeout_option not in existing_options:
+            db_options["options"] = f"{existing_options} {statement_timeout_option}".strip()
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "accounts.User"
@@ -176,6 +198,11 @@ CELERY_TASK_ACKS_LATE = True
 CELERY_TASK_REJECT_ON_WORKER_LOST = True
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_WORKER_CONCURRENCY = env("CELERY_CONCURRENCY")
+CELERY_WORKER_MAX_TASKS_PER_CHILD = env("CELERY_MAX_TASKS_PER_CHILD")
+CELERY_TASK_SOFT_TIME_LIMIT = env("CELERY_TASK_SOFT_TIME_LIMIT_SECONDS")
+CELERY_TASK_TIME_LIMIT = env("CELERY_TASK_TIME_LIMIT_SECONDS")
+CELERY_TASK_TRACK_STARTED = True
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "__PROJECT_NAME__",

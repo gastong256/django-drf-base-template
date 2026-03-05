@@ -7,6 +7,7 @@ metadata:
     app.kubernetes.io/component: beat
 spec:
   replicas: 1
+  revisionHistoryLimit: 3
   selector:
     matchLabels:
       app.kubernetes.io/name: __PROJECT_SLUG__
@@ -17,10 +18,18 @@ spec:
         app.kubernetes.io/name: __PROJECT_SLUG__
         app.kubernetes.io/component: beat
     spec:
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: beat
           image: ghcr.io/__OWNER__/__PROJECT_SLUG__:latest
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           command: ["celery", "-A", "config", "beat", "-l", "INFO"]
           envFrom:
             - configMapRef:

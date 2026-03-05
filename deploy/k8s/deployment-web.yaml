@@ -7,6 +7,12 @@ metadata:
     app.kubernetes.io/component: web
 spec:
   replicas: 2
+  revisionHistoryLimit: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: __PROJECT_SLUG__
@@ -17,10 +23,36 @@ spec:
         app.kubernetes.io/name: __PROJECT_SLUG__
         app.kubernetes.io/component: web
     spec:
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: __PROJECT_SLUG__
+              app.kubernetes.io/component: web
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: __PROJECT_SLUG__
+                    app.kubernetes.io/component: web
       containers:
         - name: web
           image: ghcr.io/__OWNER__/__PROJECT_SLUG__:latest
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: __PORT__
           envFrom:
@@ -28,6 +60,10 @@ spec:
                 name: __PROJECT_SLUG__-config
             - secretRef:
                 name: __PROJECT_SLUG__-secrets
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sh", "-c", "sleep 15"]
           startupProbe:
             httpGet:
               path: /healthz
@@ -35,18 +71,23 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 5
             failureThreshold: 20
+            timeoutSeconds: 3
           livenessProbe:
             httpGet:
               path: /healthz
               port: __PORT__
             initialDelaySeconds: 10
             periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /readyz
               port: __PORT__
             initialDelaySeconds: 10
             periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
           resources:
             requests:
               cpu: 250m

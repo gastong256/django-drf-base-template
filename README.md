@@ -19,6 +19,7 @@
 - [Multi-tenancy](#multi-tenancy)
 - [OpenTelemetry](#opentelemetry)
 - [Async Workers & HA](#async-workers--ha)
+- [HA Baseline](#ha-baseline)
 - [Runbooks](#runbooks)
 - [Releases & Conventional Commits](#releases--conventional-commits)
 - [Contributing](#contributing)
@@ -162,6 +163,7 @@ config/             Django project (not an app)
   exceptions.py     DRF custom exception handler
 docs/adr/           Architecture Decision Records
 docs/security.md    Security baseline and controls
+docs/ha.md          High-availability runtime and scaling defaults
 docs/runbooks/      Incident + rollback operational guides
 tests/              Top-level pytest suite
 scripts/            Tooling scripts
@@ -242,7 +244,17 @@ export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
   - `docker compose --profile worker up -d` starts worker + beat + redis.
   - `docker compose --profile flower up -d` starts Flower UI (port `5555`).
 - Production gunicorn can be tuned via env vars (`GUNICORN_WORKERS`, `GUNICORN_THREADS`, `GUNICORN_MAX_REQUESTS`, etc.).
-- Kubernetes baseline manifests are available in `deploy/k8s/`.
+- Kubernetes baseline manifests are available in `deploy/k8s/` with:
+  - rolling updates (`maxUnavailable: 0`)
+  - pod spread + anti-affinity for web pods
+  - web/worker disruption budgets
+  - hardened container security contexts
+
+---
+
+## HA Baseline
+
+See [docs/ha.md](docs/ha.md) for runtime tuning and Kubernetes scaling defaults.
 
 ---
 

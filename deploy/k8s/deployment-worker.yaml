@@ -7,6 +7,7 @@ metadata:
     app.kubernetes.io/component: worker
 spec:
   replicas: 2
+  revisionHistoryLimit: 3
   selector:
     matchLabels:
       app.kubernetes.io/name: __PROJECT_SLUG__
@@ -17,11 +18,24 @@ spec:
         app.kubernetes.io/name: __PROJECT_SLUG__
         app.kubernetes.io/component: worker
     spec:
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: worker
           image: ghcr.io/__OWNER__/__PROJECT_SLUG__:latest
           imagePullPolicy: IfNotPresent
-          command: ["celery", "-A", "config", "worker", "-l", "INFO", "--concurrency=2"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          command: ["sh", "-c"]
+          args:
+            - >
+              celery -A config worker -l INFO
+              --concurrency=${CELERY_CONCURRENCY:-2}
+              --max-tasks-per-child=${CELERY_MAX_TASKS_PER_CHILD:-1000}
           envFrom:
             - configMapRef:
                 name: __PROJECT_SLUG__-config

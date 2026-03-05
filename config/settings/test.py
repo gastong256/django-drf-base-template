@@ -11,6 +11,8 @@ DATABASES = {
         default="postgres://postgres:postgres@localhost:5432/__PROJECT_SLUG___test",
     ),
 }
+DATABASES["default"]["CONN_MAX_AGE"] = 0
+DATABASES["default"]["CONN_HEALTH_CHECKS"] = False
 
 # Speed up password hashing in tests
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
