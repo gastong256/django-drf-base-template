@@ -1,5 +1,5 @@
 from .base import *  # noqa: F401, F403
-from .base import SECRET_KEY, env
+from .base import ALLOWED_HOSTS, CORS_ALLOW_ALL_ORIGINS, DATABASES, SECRET_KEY, env
 
 _UNSAFE_DEFAULTS = {
     "unsafe-default-do-not-use-in-production",
@@ -13,6 +13,25 @@ if not SECRET_KEY or SECRET_KEY in _UNSAFE_DEFAULTS:
     )
 
 DEBUG = False
+
+_UNSAFE_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0"}
+if not ALLOWED_HOSTS or "*" in ALLOWED_HOSTS or set(ALLOWED_HOSTS).issubset(_UNSAFE_HOSTS):
+    raise RuntimeError(
+        "DJANGO_ALLOWED_HOSTS is not configured for production. "
+        "Set explicit public hostnames via environment variable."
+    )
+
+if CORS_ALLOW_ALL_ORIGINS:
+    raise RuntimeError(
+        "CORS_ALLOW_ALL_ORIGINS=true is not allowed in production. "
+        "Use explicit CORS_ALLOWED_ORIGINS."
+    )
+
+if DATABASES["default"]["ENGINE"].endswith("sqlite3"):
+    raise RuntimeError(
+        "DATABASE_URL points to SQLite in production. "
+        "Use PostgreSQL or another production-grade database."
+    )
 
 SECURE_PROXY_SSL_HEADER = (
     env("SECURE_PROXY_SSL_HEADER_NAME", default="HTTP_X_FORWARDED_PROTO"),

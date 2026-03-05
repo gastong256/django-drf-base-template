@@ -6,6 +6,9 @@ on:
       - main
   pull_request:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -76,6 +79,23 @@ jobs:
       - name: Typecheck
         run: uv run pyright
 
+      - name: Security scan
+        run: uv run bandit -c pyproject.toml -r apps config
+
+      - name: Check pending migrations
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/template_test
+        run: uv run python manage.py makemigrations --check --dry-run
+
+      - name: Django deploy checks
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.prod
+          DJANGO_SECRET_KEY: ci-deploy-check-secret
+          DJANGO_ALLOWED_HOSTS: api.example.com
+          CSRF_TRUSTED_ORIGINS: https://api.example.com
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/template_test
+        run: uv run python manage.py check --deploy --fail-level WARNING
+
       - name: Run tests
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/template_test
@@ -119,6 +139,23 @@ jobs:
 
       - name: Typecheck
         run: uv run pyright
+
+      - name: Security scan
+        run: uv run bandit -c pyproject.toml -r apps config
+
+      - name: Check pending migrations
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/ci_db
+        run: uv run python manage.py makemigrations --check --dry-run
+
+      - name: Django deploy checks
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.prod
+          DJANGO_SECRET_KEY: ci-deploy-check-secret
+          DJANGO_ALLOWED_HOSTS: api.example.com
+          CSRF_TRUSTED_ORIGINS: https://api.example.com
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/ci_db
+        run: uv run python manage.py check --deploy --fail-level WARNING
 
       - name: Run tests
         env:

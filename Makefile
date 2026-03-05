@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help init run test lint format typecheck migrate makemigrations shell docker-build celery-worker celery-beat celery-flower
+.PHONY: help init run test lint format typecheck migrate makemigrations shell docker-build celery-worker celery-beat celery-flower check-deploy audit-code audit-deps security
 
 PYTHON := uv run python
 MANAGE := $(PYTHON) manage.py
@@ -81,3 +81,22 @@ export-schema: ## Export OpenAPI schema to file
 
 pre-commit: ## Run pre-commit hooks against all files
 	uv run pre-commit run --all-files
+
+check-deploy: ## Run Django deploy checks with secure production defaults
+	DJANGO_SETTINGS_MODULE=config.settings.prod \
+	DJANGO_SECRET_KEY=check-deploy-secret-key \
+	DJANGO_ALLOWED_HOSTS=api.example.com \
+	CSRF_TRUSTED_ORIGINS=https://api.example.com \
+	DATABASE_URL=postgres://postgres:postgres@localhost:5432/check_deploy \
+	uv run python manage.py check --deploy --fail-level WARNING
+
+audit-code: ## Run static security scan (Bandit)
+	uv run bandit -c pyproject.toml -r apps config
+
+audit-deps: ## Run dependency vulnerability audit
+	uv run pip-audit
+
+security: ## Run all security checks
+	$(MAKE) audit-code
+	$(MAKE) audit-deps
+	$(MAKE) check-deploy

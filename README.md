@@ -14,6 +14,7 @@
 - [API Docs](#api-docs)
 - [Project Structure](#project-structure)
 - [Configuration](#configuration)
+- [Security](#security)
 - [Observability](#observability)
 - [Multi-tenancy](#multi-tenancy)
 - [OpenTelemetry](#opentelemetry)
@@ -108,6 +109,10 @@ make test-cov      # pytest + coverage report
 make shell         # Django shell
 make migrate       # apply migrations
 make makemigrations ARGS="example"  # create migrations for an app
+make audit-code    # bandit security scan
+make audit-deps    # pip-audit dependency vulnerabilities
+make check-deploy  # django --deploy checks
+make security      # run all security checks
 make pre-commit    # run all pre-commit hooks
 make celery-worker # run worker
 make celery-beat   # run scheduler
@@ -156,6 +161,7 @@ config/             Django project (not an app)
   otel.py           Optional OpenTelemetry setup
   exceptions.py     DRF custom exception handler
 docs/adr/           Architecture Decision Records
+docs/security.md    Security baseline and controls
 docs/runbooks/      Incident + rollback operational guides
 tests/              Top-level pytest suite
 scripts/            Tooling scripts
@@ -178,6 +184,16 @@ All configuration is environment-based (12-factor). Copy `.env.example` to `.env
 | `config.settings.prod` | Production |
 
 See `.env.example` for all supported variables.
+
+---
+
+## Security
+
+See [docs/security.md](docs/security.md) for the full baseline.
+
+- **Fail-fast prod settings**: blocks unsafe secret key, wildcard/localhost-only hosts, open CORS, and SQLite in production.
+- **CI guardrails**: Bandit scan, migration drift checks, and Django `check --deploy`.
+- **Supply-chain**: weekly Dependabot updates and a scheduled security workflow (`bandit` + `pip-audit`).
 
 ---
 

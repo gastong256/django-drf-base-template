@@ -1,0 +1,41 @@
+name: Security
+
+on:
+  pull_request:
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Dependency and static audits
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.4.*"
+
+      - name: Initialize template if needed
+        if: ${{ !hashFiles('.initialized') }}
+        env:
+          PROJECT_NAME: "Template Security"
+          PROJECT_SLUG: "template_security"
+          SERVICE_NAME: "template-security"
+          OWNER: "security-bot"
+          DESCRIPTION: "Security workflow bootstrap"
+          PORT: "8000"
+        run: bash scripts/bootstrap.sh
+
+      - name: Install deps
+        run: uv sync
+
+      - name: Bandit
+        run: uv run bandit -c pyproject.toml -r apps config
+
+      - name: pip-audit
+        run: uv run pip-audit

@@ -43,6 +43,8 @@ dev-dependencies = [
     "ruff>=0.6",
     "black>=24",
     "pyright>=1.1",
+    "bandit[toml]>=1.8",
+    "pip-audit>=2.9",
     "pre-commit>=3",
     "python-semantic-release>=9",
 ]
@@ -92,6 +94,10 @@ omit = ["**/migrations/**", "**/tests/**"]
 [tool.coverage.report]
 skip_empty = true
 show_missing = true
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", "scripts"]
+skips = ["B101"]
 
 [tool.semantic_release]
 version_toml = ["pyproject.toml:project.version"]
