@@ -1,3 +1,5 @@
+import structlog
+
 from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
@@ -6,6 +8,8 @@ from rest_framework import serializers
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+logger = structlog.get_logger(__name__)
 
 _status_response = inline_serializer(
     name="StatusResponse",
@@ -39,8 +43,12 @@ class ReadinessView(APIView):
 
         try:
             connection.ensure_connection()
-        except Exception as exc:
-            return Response({"status": "unavailable", "detail": str(exc)}, status=503)
+        except Exception:
+            logger.exception("readiness_check_failed")
+            return Response(
+                {"status": "unavailable", "detail": "Database unavailable."},
+                status=503,
+            )
 
         return Response({"status": "ok"})
 

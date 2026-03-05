@@ -37,6 +37,7 @@ dev-dependencies = [
     "black>=24",
     "pyright>=1.1",
     "pre-commit>=3",
+    "python-semantic-release>=9",
 ]
 
 [build-system]

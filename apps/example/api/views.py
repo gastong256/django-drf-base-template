@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 
 from apps.example import selectors, services
 from apps.example.api.serializers import ItemCreateSerializer, ItemSerializer
+from apps.example.models import Item
 
 logger = structlog.get_logger(__name__)
 
@@ -59,7 +60,7 @@ class ItemDetailView(APIView):
     def get(self, request: Request, pk: uuid.UUID) -> Response:
         try:
             item = selectors.get_item(pk)
-        except Exception:
+        except Item.DoesNotExist:
             raise NotFound(detail="Item not found.")
 
         return Response(ItemSerializer(item).data)
