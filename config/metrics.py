@@ -74,7 +74,11 @@ class MetricsMiddleware:
         try:
             response = self.get_response(request)
         except Exception:
-            _track_request_metrics(request, status_code=500, duration_seconds=perf_counter() - started_at)
+            _track_request_metrics(
+                request,
+                status_code=500,
+                duration_seconds=perf_counter() - started_at,
+            )
             raise
 
         _track_request_metrics(

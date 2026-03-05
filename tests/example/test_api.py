@@ -203,7 +203,11 @@ class TestAuthTokenEndpoints:
         assert refresh_response.status_code == status.HTTP_200_OK
         assert "access" in refresh_response.json()
 
-    def test_me_endpoint_returns_current_user(self, api_client: APIClient, django_user_model: type) -> None:
+    def test_me_endpoint_returns_current_user(
+        self,
+        api_client: APIClient,
+        django_user_model: type,
+    ) -> None:
         username = "meuser"
         password = "strong-pass-123"
         django_user_model.objects.create_user(username=username, password=password)

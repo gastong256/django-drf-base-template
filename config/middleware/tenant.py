@@ -66,7 +66,10 @@ class TenantMiddleware:
 
         tenant_id = _normalize_tenant_id(request.META.get(TENANT_HEADER))
         if tenant_id is None:
-            logger.warning("invalid_tenant_header", provided_tenant_id=request.META.get(TENANT_HEADER))
+            logger.warning(
+                "invalid_tenant_header",
+                provided_tenant_id=request.META.get(TENANT_HEADER),
+            )
             return JsonResponse(
                 {
                     "error": {

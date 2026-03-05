@@ -1,7 +1,7 @@
 import environ
 
 from .base import *  # noqa: F401, F403
-from .base import APP_ENV, BASE_DIR, LOG_LEVEL, SERVICE_NAME, env
+from .base import APP_ENV, BASE_DIR, LOG_LEVEL, SERVICE_NAME
 
 environ.Env.read_env(BASE_DIR / ".env", overwrite=True)
 

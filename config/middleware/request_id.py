@@ -3,7 +3,6 @@ import uuid
 from collections.abc import Callable
 
 import structlog
-
 from django.http import HttpRequest, HttpResponse
 
 from config.context import request_id_var

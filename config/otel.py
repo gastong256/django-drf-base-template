@@ -34,8 +34,8 @@ def setup_otel() -> None:
         from opentelemetry.instrumentation.psycopg import PsycopgInstrumentor
         from opentelemetry.sdk.resources import DEPLOYMENT_ENVIRONMENT, SERVICE_NAME, Resource
         from opentelemetry.sdk.trace import TracerProvider
-        from opentelemetry.sdk.trace.sampling import TraceIdRatioBased
         from opentelemetry.sdk.trace.export import BatchSpanProcessor
+        from opentelemetry.sdk.trace.sampling import TraceIdRatioBased
     except ImportError as exc:
         raise ImportError(
             "OpenTelemetry packages not installed. Run: uv sync --extra otel"

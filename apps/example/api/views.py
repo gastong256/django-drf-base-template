@@ -70,7 +70,7 @@ class ItemDetailView(APIView):
     def get(self, request: Request, pk: uuid.UUID) -> Response:
         try:
             item = selectors.get_item(pk)
-        except Item.DoesNotExist:
-            raise NotFound(detail="Item not found.")
+        except Item.DoesNotExist as exc:
+            raise NotFound(detail="Item not found.") from exc
 
         return Response(ItemSerializer(item).data)
