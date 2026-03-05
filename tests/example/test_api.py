@@ -5,6 +5,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from apps.example.models import Item
+from apps.tenants.models import Tenant
 from config.context import tenant_id_var
 
 
@@ -30,12 +31,25 @@ class TestPingEndpoint:
         assert response["X-Request-ID"]
 
     def test_normalizes_tenant_header_to_lowercase(self, api_client: APIClient) -> None:
+        Tenant.objects.create(slug="acme_tenant", name="Acme")
         api_client.get("/api/v1/ping", HTTP_X_TENANT_ID="ACME_TENANT")
         assert tenant_id_var.get() == "acme_tenant"
 
-    def test_invalid_tenant_header_falls_back_to_public(self, api_client: APIClient) -> None:
-        api_client.get("/api/v1/ping", HTTP_X_TENANT_ID="invalid tenant id")
-        assert tenant_id_var.get() == "public"
+    def test_invalid_tenant_header_returns_400(self, api_client: APIClient) -> None:
+        response = api_client.get("/api/v1/ping", HTTP_X_TENANT_ID="invalid tenant id")
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.json()["error"]["code"] == "invalid_tenant"
+
+    def test_inactive_tenant_returns_400(self, api_client: APIClient) -> None:
+        Tenant.objects.create(slug="inactive", name="Inactive", is_active=False)
+        response = api_client.get("/api/v1/ping", HTTP_X_TENANT_ID="inactive")
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.json()["error"]["code"] == "invalid_tenant"
+
+    def test_unknown_tenant_returns_400(self, api_client: APIClient) -> None:
+        response = api_client.get("/api/v1/ping", HTTP_X_TENANT_ID="missing")
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.json()["error"]["code"] == "invalid_tenant"
 
 
 @pytest.mark.django_db
@@ -72,11 +86,25 @@ class TestItemCreateEndpoint:
         assert response.status_code == status.HTTP_201_CREATED
         assert response.json()["description"] == ""
 
+    def test_creates_item_scoped_to_header_tenant(self, authenticated_client: APIClient) -> None:
+        Tenant.objects.create(slug="acme", name="Acme")
+        response = authenticated_client.post(
+            self.url,
+            {"name": "Tenant Widget"},
+            format="json",
+            HTTP_X_TENANT_ID="acme",
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        created_item = Item.objects.get(pk=response.json()["id"])
+        assert created_item.tenant.slug == "acme"
+
 
 @pytest.mark.django_db
 class TestItemDetailEndpoint:
     def _create_item(self) -> Item:
-        return Item.objects.create(name="Existing", description="desc")
+        public_tenant = Tenant.objects.get(slug="public")
+        return Item.objects.create(name="Existing", description="desc", tenant=public_tenant)
 
     def test_requires_authentication(self, api_client: APIClient) -> None:
         item = self._create_item()
@@ -96,6 +124,14 @@ class TestItemDetailEndpoint:
         assert response.status_code == status.HTTP_404_NOT_FOUND
         body = response.json()
         assert body["error"]["code"] == "not_found"
+
+    def test_returns_404_for_other_tenant_item(self, authenticated_client: APIClient) -> None:
+        acme = Tenant.objects.create(slug="acme", name="Acme")
+        item = Item.objects.create(name="Secret", description="", tenant=acme)
+
+        response = authenticated_client.get(f"/api/v1/items/{item.pk}", HTTP_X_TENANT_ID="public")
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.json()["error"]["code"] == "not_found"
 
 
 @pytest.mark.django_db

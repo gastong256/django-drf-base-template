@@ -9,6 +9,10 @@ class TestLivenessEndpoint:
         assert response.status_code == status.HTTP_200_OK
         assert response.json() == {"status": "ok"}
 
+    def test_ignores_invalid_tenant_header(self, api_client: APIClient) -> None:
+        response = api_client.get("/healthz", HTTP_X_TENANT_ID="invalid tenant id")
+        assert response.status_code == status.HTTP_200_OK
+
 
 @pytest.mark.django_db
 class TestReadinessEndpoint:

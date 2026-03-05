@@ -123,6 +123,7 @@ The Postman collection and environment are in `postman/`.
 
 ```
 apps/               Bounded-context Django apps
+  tenants/          Tenant model + tenant-aware base classes/managers
   example/          Reference implementation — copy this pattern for new apps
     api/            HTTP layer: serializers, views, urls
     models.py       Data model
@@ -131,7 +132,7 @@ apps/               Bounded-context Django apps
 config/             Django project (not an app)
   middleware/       RequestID + Tenant middleware
   settings/         base / local / test / prod
-  context.py        ContextVars: request_id, tenant_id
+  context.py        ContextVars: request_id, tenant_id, tenant_pk
   logging.py        structlog configuration
   otel.py           Optional OpenTelemetry setup
   exceptions.py     DRF custom exception handler
@@ -173,9 +174,10 @@ See [docs/observability.md](docs/observability.md) for full details.
 
 See [ADR 0002](docs/adr/0002-multitenancy-strategy.md) for the full strategy.
 
-- Send `X-Tenant-ID: my-tenant` in request headers; defaults to `"public"`.
+- Tenant resolution is header-based: `X-Tenant-ID: my-tenant` (defaults to `"public"`).
+- Tenants are persisted in `apps.tenants.Tenant`; inactive or unknown tenants return `400 invalid_tenant`.
+- Data is isolated with a tenant foreign key (`shared schema + tenant column`) in domain models.
 - `tenant_id` appears in all log records automatically.
-- No data-layer isolation by default — extend `services.py` and querysets as needed.
 
 ---
 

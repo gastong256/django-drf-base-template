@@ -6,8 +6,8 @@ from .models import Item
 
 
 def get_item(item_id: uuid.UUID) -> Item:
-    return Item.objects.get(id=item_id)
+    return Item.scoped.get(id=item_id)
 
 
 def list_items() -> QuerySet[Item]:
-    return Item.objects.all()
+    return Item.scoped.all()

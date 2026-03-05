@@ -1,7 +1,7 @@
 # ADR 0002: Multitenancy Strategy
 
 **Status:** Accepted
-**Date:** 2024-01-01
+**Date:** 2026-03-05
 
 ## Context
 
@@ -9,13 +9,15 @@ The service may need to serve multiple tenants from a single deployment. We need
 
 ## Decision
 
-We adopt a **header-based tenant resolution** approach as the initial hook:
+We adopt **shared schema + tenant column** as the default strategy, with header-based resolution:
 
 1. `TenantMiddleware` reads the `X-Tenant-ID` request header.
 2. If absent, `tenant_id` defaults to `"public"`.
-3. `tenant_id` is stored in a `ContextVar` so it is accessible throughout the request lifecycle — in log records, service layer functions, and future query filters — without being passed explicitly.
+3. Tenant identifiers are validated against the `Tenant` table; invalid/inactive tenants are rejected with HTTP 400.
+4. `tenant_id` is stored in a `ContextVar` so it is accessible throughout the request lifecycle.
+5. Domain models use a tenant foreign key to enforce data isolation in application queries.
 
-This is intentionally lightweight. No row-level security or schema-per-tenant isolation is implemented at this layer. Teams adopting multitenancy at the data layer should extend this foundation with one of:
+This approach keeps operational simplicity while providing real data isolation boundaries at the application layer. Teams can still evolve to stronger isolation with:
 
 - **Shared schema + tenant column**: Add a `tenant_id` FK/field to models and use a global queryset filter (Django managers or a middleware-driven queryset mixin).
 - **Schema-per-tenant**: Use `django-tenants` or a custom PostgreSQL `SET search_path` approach per request.
@@ -23,7 +25,7 @@ This is intentionally lightweight. No row-level security or schema-per-tenant is
 
 ## Consequences
 
-- All log records include `tenant_id` at zero overhead.
-- Single-tenant deployments see `tenant_id = "public"` everywhere and can ignore the mechanism.
-- The `X-Tenant-ID` header must be treated as **untrusted user input** and validated against an allowlist before use in any security-sensitive decision. The current implementation passes it through raw; production multitenancy must add validation.
-- API gateways or service meshes should be responsible for injecting a verified `X-Tenant-ID` header.
+- All log records include `tenant_id`.
+- Data access in selectors/services can be safely scoped by tenant-aware managers/querysets.
+- A default `public` tenant is seeded in migrations for single-tenant deployments.
+- `X-Tenant-ID` remains untrusted input; gateways or service meshes should still inject verified headers in production.
