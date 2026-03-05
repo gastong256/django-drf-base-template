@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   detect:
-    name: Detect initialization
+    name: Detect template state
     runs-on: ubuntu-latest
     outputs:
       initialized: ${{ steps.check.outputs.initialized }}
@@ -23,10 +23,10 @@ jobs:
       - uses: actions/checkout@v4
       - id: check
         run: |
-          if [ -f .initialized ]; then
-            echo "initialized=true" >> "$GITHUB_OUTPUT"
-          else
+          if grep -q "__PROJECT_SLUG__" pyproject.toml; then
             echo "initialized=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "initialized=true" >> "$GITHUB_OUTPUT"
           fi
 
   ci:

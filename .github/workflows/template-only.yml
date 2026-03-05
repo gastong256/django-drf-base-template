@@ -14,9 +14,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  detect:
+    name: Detect template state
+    runs-on: ubuntu-latest
+    outputs:
+      template: ${{ steps.check.outputs.template }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        run: |
+          if grep -q "__PROJECT_SLUG__" pyproject.toml; then
+            echo "template=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "template=false" >> "$GITHUB_OUTPUT"
+          fi
+
   validate-template:
     name: Validate template in temp workspace
-    if: ${{ !hashFiles('.initialized') }}
+    needs: detect
+    if: needs.detect.outputs.template == 'true'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -65,6 +81,16 @@ jobs:
           if grep -R -n -E "__PROJECT_NAME__|__PROJECT_SLUG__|__SERVICE_NAME__|__OWNER__|__DESCRIPTION__|__PORT__" \
             --exclude-dir=.git --exclude-dir=.venv --exclude-dir=__pycache__ .; then
             echo "Found unresolved placeholders after bootstrap"
+            exit 1
+          fi
+
+      - name: Ensure template-only artifacts are cleaned
+        run: |
+          cd /tmp/template-validation
+          test ! -f scripts/bootstrap.sh
+          test ! -f .github/workflows/template-only.yml
+          if grep -n "^init:[[:space:]]*##" Makefile; then
+            echo "Found template init target after bootstrap"
             exit 1
           fi
 

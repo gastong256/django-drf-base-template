@@ -177,6 +177,18 @@ cleanup_template_artifacts() {
     done
 }
 
+run_non_blocking() {
+    local description="$1"
+    shift
+
+    if "$@"; then
+        return 0
+    fi
+
+    echo "WARNING: ${description} failed."
+    return 1
+}
+
 # ── Rename postman files ──────────────────────────────────────────────────────
 if ls postman/__PROJECT_SLUG__*.json &>/dev/null 2>&1; then
     :  # Already replaced above — nothing to rename
@@ -201,18 +213,25 @@ sed -i "s|__DJANGO_SECRET_KEY__|${DJANGO_SECRET_KEY}|g" .env
 echo "$PROJECT_SLUG" > "$SENTINEL"
 echo "timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$SENTINEL"
 
-# ── Install deps ──────────────────────────────────────────────────────────────
 BOOTSTRAP_SKIP_SYNC="${BOOTSTRAP_SKIP_SYNC:-false}"
 BOOTSTRAP_SKIP_PRE_COMMIT="${BOOTSTRAP_SKIP_PRE_COMMIT:-false}"
 BOOTSTRAP_CLEAN_TEMPLATE="${BOOTSTRAP_CLEAN_TEMPLATE:-true}"
+if [[ "$BOOTSTRAP_CLEAN_TEMPLATE" == "true" ]]; then
+    cleanup_template_artifacts
+else
+    echo "Skipping template artifact cleanup (BOOTSTRAP_CLEAN_TEMPLATE=false)."
+fi
 
 echo ""
+# ── Install deps ──────────────────────────────────────────────────────────────
 if [[ "$BOOTSTRAP_SKIP_SYNC" == "true" ]]; then
     echo "Skipping dependency installation (BOOTSTRAP_SKIP_SYNC=true)."
 else
     echo "Installing dependencies..."
     if command -v uv &>/dev/null; then
-        uv sync
+        if ! run_non_blocking "Dependency installation (uv sync)" uv sync; then
+            echo "  Run 'uv sync' manually to finish setup."
+        fi
     else
         echo "WARNING: uv not found. Install uv and run 'uv sync' manually."
         echo "  curl -LsSf https://astral.sh/uv/install.sh | sh"
@@ -226,13 +245,9 @@ elif [[ "$BOOTSTRAP_SKIP_SYNC" == "true" ]]; then
     echo "Skipping pre-commit hook installation because dependency sync was skipped."
 elif command -v uv &>/dev/null; then
     echo "Installing pre-commit hooks..."
-    uv run pre-commit install
-fi
-
-if [[ "$BOOTSTRAP_CLEAN_TEMPLATE" == "true" ]]; then
-    cleanup_template_artifacts
-else
-    echo "Skipping template artifact cleanup (BOOTSTRAP_CLEAN_TEMPLATE=false)."
+    if ! run_non_blocking "pre-commit hook installation" uv run pre-commit install; then
+        echo "  Run 'uv run pre-commit install' manually."
+    fi
 fi
 
 echo ""

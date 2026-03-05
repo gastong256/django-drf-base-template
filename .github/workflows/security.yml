@@ -10,8 +10,25 @@ permissions:
   contents: read
 
 jobs:
+  detect:
+    name: Detect template state
+    runs-on: ubuntu-latest
+    outputs:
+      initialized: ${{ steps.check.outputs.initialized }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        run: |
+          if grep -q "__PROJECT_SLUG__" pyproject.toml; then
+            echo "initialized=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "initialized=true" >> "$GITHUB_OUTPUT"
+          fi
+
   audit:
     name: Dependency and static audits
+    needs: detect
+    if: needs.detect.outputs.initialized == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,18 +36,6 @@ jobs:
       - uses: astral-sh/setup-uv@v3
         with:
           version: "0.4.*"
-
-      - name: Initialize template if needed
-        if: ${{ !hashFiles('.initialized') }}
-        env:
-          PROJECT_NAME: "Template Security"
-          PROJECT_SLUG: "template_security"
-          SERVICE_NAME: "template-security"
-          OWNER: "security-bot"
-          DESCRIPTION: "Security workflow bootstrap"
-          PORT: "8000"
-          BOOTSTRAP_SKIP_SYNC: "true"
-        run: bash scripts/bootstrap.sh
 
       - name: Install deps
         run: uv sync
