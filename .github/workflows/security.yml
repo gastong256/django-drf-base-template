@@ -29,6 +29,7 @@ jobs:
           OWNER: "security-bot"
           DESCRIPTION: "Security workflow bootstrap"
           PORT: "8000"
+          BOOTSTRAP_SKIP_SYNC: "true"
         run: bash scripts/bootstrap.sh
 
       - name: Install deps

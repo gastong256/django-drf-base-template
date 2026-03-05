@@ -75,26 +75,29 @@ INCLUDE_PATTERNS=(
 )
 
 EXCLUDE_DIRS=(".git" ".venv" "node_modules" "__pycache__" "*.egg-info" "htmlcov")
+EXCLUDE_FILES=("scripts/bootstrap.sh")
 
 build_find_args() {
-    local args=()
+    FIND_EXCLUDE_ARGS=()
     for d in "${EXCLUDE_DIRS[@]}"; do
-        args+=(-not -path "*/$d/*" -not -path "*/$d")
+        FIND_EXCLUDE_ARGS+=(-not -path "*/$d/*" -not -path "*/$d")
     done
-    echo "${args[@]}"
+    for f in "${EXCLUDE_FILES[@]}"; do
+        FIND_EXCLUDE_ARGS+=(-not -path "./$f")
+    done
 }
 
 replace_in_files() {
     local placeholder="$1"
     local value="$2"
 
-    # Escape for sed
+    # Escape replacement value for sed (`&` expands to the full match).
     local escaped_value
-    escaped_value="$(printf '%s\n' "$value" | sed 's/[[\.*^$()+?{|]/\\&/g')"
+    escaped_value="$(printf '%s\n' "$value" | sed -e 's/[&|\\]/\\&/g')"
 
     for pattern in "${INCLUDE_PATTERNS[@]}"; do
-        # shellcheck disable=SC2046
-        find . $(build_find_args) -type f -name "$pattern" \
+        build_find_args
+        find . "${FIND_EXCLUDE_ARGS[@]}" -type f -name "$pattern" \
             -exec grep -lF "$placeholder" {} \; \
             | while IFS= read -r file; do
                 sed -i "s|${placeholder}|${escaped_value}|g" "$file"
@@ -109,7 +112,6 @@ replace_in_files "__SERVICE_NAME__"      "$SERVICE_NAME"
 replace_in_files "__OWNER__"             "$OWNER"
 replace_in_files "__DESCRIPTION__"       "$DESCRIPTION"
 replace_in_files "__PORT__"              "$PORT"
-replace_in_files "__DJANGO_SECRET_KEY__" "$DJANGO_SECRET_KEY"
 
 # ── Rename postman files ──────────────────────────────────────────────────────
 if ls postman/__PROJECT_SLUG__*.json &>/dev/null 2>&1; then
@@ -126,30 +128,41 @@ done
 # ── Create .env from .env.example ─────────────────────────────────────────────
 if [[ ! -f .env ]]; then
     cp .env.example .env
-    # Patch the generated secret key directly into .env
-    sed -i "s|__DJANGO_SECRET_KEY__|${DJANGO_SECRET_KEY}|g" .env
     echo "Created .env from .env.example"
 fi
+# Patch the generated secret key directly into .env (if placeholder is present)
+sed -i "s|__DJANGO_SECRET_KEY__|${DJANGO_SECRET_KEY}|g" .env
+
+# ── Stamp sentinel early (project is now initialized even if installs fail) ──
+echo "$PROJECT_SLUG" > "$SENTINEL"
+echo "timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$SENTINEL"
 
 # ── Install deps ──────────────────────────────────────────────────────────────
+BOOTSTRAP_SKIP_SYNC="${BOOTSTRAP_SKIP_SYNC:-false}"
+BOOTSTRAP_SKIP_PRE_COMMIT="${BOOTSTRAP_SKIP_PRE_COMMIT:-false}"
+
 echo ""
-echo "Installing dependencies..."
-if command -v uv &>/dev/null; then
-    uv sync
+if [[ "$BOOTSTRAP_SKIP_SYNC" == "true" ]]; then
+    echo "Skipping dependency installation (BOOTSTRAP_SKIP_SYNC=true)."
 else
-    echo "WARNING: uv not found. Install uv and run 'uv sync' manually."
-    echo "  curl -LsSf https://astral.sh/uv/install.sh | sh"
+    echo "Installing dependencies..."
+    if command -v uv &>/dev/null; then
+        uv sync
+    else
+        echo "WARNING: uv not found. Install uv and run 'uv sync' manually."
+        echo "  curl -LsSf https://astral.sh/uv/install.sh | sh"
+    fi
 fi
 
 # ── Install pre-commit hooks ──────────────────────────────────────────────────
-if command -v uv &>/dev/null; then
+if [[ "$BOOTSTRAP_SKIP_PRE_COMMIT" == "true" ]]; then
+    echo "Skipping pre-commit hook installation (BOOTSTRAP_SKIP_PRE_COMMIT=true)."
+elif [[ "$BOOTSTRAP_SKIP_SYNC" == "true" ]]; then
+    echo "Skipping pre-commit hook installation because dependency sync was skipped."
+elif command -v uv &>/dev/null; then
     echo "Installing pre-commit hooks..."
     uv run pre-commit install
 fi
-
-# ── Stamp sentinel ────────────────────────────────────────────────────────────
-echo "__PROJECT_SLUG__" > "$SENTINEL"
-echo "timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$SENTINEL"
 
 echo ""
 echo "✓ Bootstrap complete."

@@ -65,6 +65,7 @@ jobs:
           OWNER: "ci-bot"
           DESCRIPTION: "CI template validation"
           PORT: "8000"
+          BOOTSTRAP_SKIP_SYNC: "true"
         run: bash scripts/bootstrap.sh
 
       - name: Install deps
