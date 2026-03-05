@@ -63,13 +63,22 @@ curl http://localhost:__PORT__/readyz
 # Ping
 curl http://localhost:__PORT__/api/v1/ping
 
+# Create a local API user once (idempotent)
+uv run python manage.py shell -c "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.filter(username='apiuser').exists() or User.objects.create_user('apiuser', password='change-me')"
+
+# Obtain JWT token pair
+TOKEN=$(curl -s -X POST http://localhost:__PORT__/api/v1/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"username":"apiuser","password":"change-me"}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["access"])')
+
 # Create an item
 curl -s -X POST http://localhost:__PORT__/api/v1/items \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name": "Widget", "description": "A useful widget."}' | python3 -m json.tool
 
 # Retrieve an item (replace <id> with the UUID from above)
-curl http://localhost:__PORT__/api/v1/items/<id>
+curl -H "Authorization: Bearer $TOKEN" http://localhost:__PORT__/api/v1/items/<id>
 ```
 
 ---

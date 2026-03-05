@@ -5,9 +5,11 @@ from django.urls import include, path
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from rest_framework import serializers
+from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 logger = structlog.get_logger(__name__)
 
@@ -18,6 +20,8 @@ _status_response = inline_serializer(
 
 
 class LivenessView(APIView):
+    permission_classes = [AllowAny]
+
     @extend_schema(
         operation_id="liveness",
         summary="Liveness probe",
@@ -29,6 +33,8 @@ class LivenessView(APIView):
 
 
 class ReadinessView(APIView):
+    permission_classes = [AllowAny]
+
     @extend_schema(
         operation_id="readiness",
         summary="Readiness probe",
@@ -57,6 +63,8 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("healthz", LivenessView.as_view(), name="liveness"),
     path("readyz", ReadinessView.as_view(), name="readiness"),
+    path("api/v1/auth/token", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("api/v1/auth/token/refresh", TokenRefreshView.as_view(), name="token_refresh"),
     # OpenAPI
     path("api/openapi.json", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
