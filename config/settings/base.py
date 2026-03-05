@@ -5,6 +5,7 @@ import environ
 
 from config.logging import configure_logging
 from config.otel import setup_otel
+from config.sentry import setup_sentry
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -18,6 +19,11 @@ env = environ.Env(
     RATE_LIMIT_USER=(str, "300/minute"),
     JWT_ACCESS_MINUTES=(int, 15),
     JWT_REFRESH_DAYS=(int, 7),
+    SERVICE_NAME=(str, "__SERVICE_NAME__"),
+    APP_ENV=(str, "local"),
+    METRICS_ENABLED=(bool, False),
+    METRICS_ALLOWED_CIDRS=(list, ["127.0.0.1/32", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]),
+    METRICS_TOKEN=(str, ""),
     LOG_LEVEL=(str, "INFO"),
     OTEL_ENABLED=(bool, False),
     REDIS_URL=(str, ""),
@@ -36,6 +42,11 @@ CORS_ALLOW_ALL_ORIGINS = env("CORS_ALLOW_ALL_ORIGINS")
 CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS")
 CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS")
 REDIS_URL = env("REDIS_URL")
+SERVICE_NAME = env("SERVICE_NAME")
+APP_ENV = env("APP_ENV")
+METRICS_ENABLED = env("METRICS_ENABLED")
+METRICS_ALLOWED_CIDRS = env("METRICS_ALLOWED_CIDRS")
+METRICS_TOKEN = env("METRICS_TOKEN")
 
 CELERY_BROKER_URL = env("CELERY_BROKER_URL", default=REDIS_URL or "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default=CELERY_BROKER_URL)
@@ -64,6 +75,7 @@ MIDDLEWARE = [
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "config.middleware.request_id.RequestIDMiddleware",
     "config.middleware.tenant.TenantMiddleware",
+    "config.metrics.MetricsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -176,6 +188,12 @@ SPECTACULAR_SETTINGS = {
 
 LOG_LEVEL = env("LOG_LEVEL")
 JSON_LOGS = env.bool("JSON_LOGS", default=True)
-configure_logging(log_level=LOG_LEVEL, json_logs=JSON_LOGS)
+configure_logging(
+    log_level=LOG_LEVEL,
+    json_logs=JSON_LOGS,
+    service_name=SERVICE_NAME,
+    environment=APP_ENV,
+)
 
+setup_sentry()
 setup_otel()

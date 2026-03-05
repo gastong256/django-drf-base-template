@@ -13,6 +13,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
+from config.metrics import MetricsView
+
 logger = structlog.get_logger(__name__)
 
 _status_response = inline_serializer(
@@ -87,6 +89,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("healthz", LivenessView.as_view(), name="liveness"),
     path("readyz", ReadinessView.as_view(), name="readiness"),
+    path("metrics", MetricsView.as_view(), name="metrics"),
     path("api/v1/auth/token", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/v1/auth/token/refresh", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/v1/auth/", include("apps.accounts.api.urls")),

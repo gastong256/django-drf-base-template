@@ -14,6 +14,7 @@ TENANT_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]{0,62}$")
 SKIP_TENANT_VALIDATION_PREFIXES = (
     "/healthz",
     "/readyz",
+    "/metrics",
     "/api/openapi.json",
     "/api/docs",
     "/api/redoc",

@@ -13,9 +13,15 @@ Every log record automatically includes:
 |--------------|------------------------------------|
 | `request_id` | `RequestIDMiddleware` + ContextVar |
 | `tenant_id`  | `TenantMiddleware` + ContextVar    |
+| `service`    | `SERVICE_NAME` env var             |
+| `environment`| `APP_ENV` env var                  |
+| `trace_id`   | OpenTelemetry span context (if enabled) |
+| `span_id`    | OpenTelemetry span context (if enabled) |
 | `timestamp`  | ISO 8601 UTC                       |
 | `level`      | Log level string                   |
 | `logger`     | Module name                        |
+
+Sensitive values are redacted in logs (`password`, `token`, `secret`, authorization headers, API keys).
 
 ### Emitting logs in application code
 
@@ -57,11 +63,25 @@ OTel tracing is disabled by default. To enable it:
    OTEL_ENABLED=true
    OTEL_SERVICE_NAME=my-service
    OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+   OTEL_TRACES_SAMPLER_ARG=0.2
+   OTEL_EXPORTER_OTLP_INSECURE=false
    ```
 
 3. Restart the service. Django and psycopg will be auto-instrumented.
 
 The setup is in `config/otel.py` and is a no-op when disabled — no import errors if OTel packages are absent.
+
+## Sentry (optional)
+
+Sentry is disabled by default. To enable:
+
+```env
+SENTRY_DSN=https://examplePublicKey@o0.ingest.sentry.io/0
+SENTRY_TRACES_SAMPLE_RATE=0.1
+SENTRY_PROFILES_SAMPLE_RATE=0.0
+```
+
+`config/sentry.py` initializes Sentry only when `SENTRY_DSN` is set.
 
 ## Health Endpoints
 
@@ -71,6 +91,13 @@ The setup is in `config/otel.py` and is a no-op when disabled — no import erro
 | `GET /readyz`  | Readiness — ready to serve traffic | Yes | Optional (`READINESS_CHECK_REDIS=true`) |
 
 Use `readyz` in Kubernetes `readinessProbe` and `healthz` in `livenessProbe`.
+
+## Metrics Endpoint
+
+- Endpoint: `GET /metrics`
+- Disabled by default (`METRICS_ENABLED=false`)
+- Protected by internal CIDR allowlist (`METRICS_ALLOWED_CIDRS`) or shared token header (`X-Metrics-Token`)
+- Prometheus metrics include request totals and request duration histograms
 
 ## Log Level Configuration
 

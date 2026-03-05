@@ -18,6 +18,7 @@
 - [Multi-tenancy](#multi-tenancy)
 - [OpenTelemetry](#opentelemetry)
 - [Async Workers & HA](#async-workers--ha)
+- [Runbooks](#runbooks)
 - [Releases & Conventional Commits](#releases--conventional-commits)
 - [Contributing](#contributing)
 
@@ -155,6 +156,7 @@ config/             Django project (not an app)
   otel.py           Optional OpenTelemetry setup
   exceptions.py     DRF custom exception handler
 docs/adr/           Architecture Decision Records
+docs/runbooks/      Incident + rollback operational guides
 tests/              Top-level pytest suite
 scripts/            Tooling scripts
 postman/            Postman collection + environment
@@ -183,9 +185,12 @@ See `.env.example` for all supported variables.
 
 See [docs/observability.md](docs/observability.md) for full details.
 
-- **Logs**: JSON to stdout (structlog). Every record includes `request_id` and `tenant_id`.
+- **Logs**: JSON to stdout (structlog). Includes `request_id`, `tenant_id`, `service`, `environment`, and OTel trace IDs when available.
+- **Redaction**: sensitive fields (`password`, `token`, `authorization`, `secret`) are masked automatically.
 - **Request ID**: `X-Request-ID` header, auto-generated if missing, echoed in response.
 - **Health**: `GET /healthz` (liveness), `GET /readyz` (readiness + DB + optional Redis check).
+- **Metrics**: optional internal `GET /metrics` endpoint protected by CIDR/token.
+- **Sentry**: optional error tracking via `SENTRY_DSN`.
 
 ---
 
@@ -222,6 +227,13 @@ export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
   - `docker compose --profile flower up -d` starts Flower UI (port `5555`).
 - Production gunicorn can be tuned via env vars (`GUNICORN_WORKERS`, `GUNICORN_THREADS`, `GUNICORN_MAX_REQUESTS`, etc.).
 - Kubernetes baseline manifests are available in `deploy/k8s/`.
+
+---
+
+## Runbooks
+
+- Incident triage and response: [`docs/runbooks/incident-response.md`](docs/runbooks/incident-response.md)
+- Rollback procedure: [`docs/runbooks/rollback.md`](docs/runbooks/rollback.md)
 
 ---
 
