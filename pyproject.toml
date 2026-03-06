@@ -73,6 +73,7 @@ known-first-party = ["apps", "config"]
 [tool.black]
 line-length = 100
 target-version = ["py312"]
+extend-exclude = ".*/migrations/.*"
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings.test"
@@ -85,8 +86,8 @@ testpaths = ["tests"]
 [tool.pyright]
 pythonVersion = "3.12"
 typeCheckingMode = "basic"
-include = ["apps", "config", "tests"]
-exclude = ["**/migrations/**"]
+include = ["apps", "config"]
+exclude = ["**/migrations/**", "tests/**"]
 venvPath = "."
 venv = ".venv"
 

@@ -1,3 +1,5 @@
+from typing import Any, cast
+
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
 from django.core.management.base import BaseCommand
@@ -10,6 +12,8 @@ class Command(BaseCommand):
     help = "Create default API roles and assign model permissions."
 
     def handle(self, *args, **options):  # type: ignore[no-untyped-def]
+        success_style = cast(Any, self.style).SUCCESS
+
         role_to_permissions = {
             ROLE_READER: {"view_item"},
             ROLE_WRITER: {"view_item", "add_item", "change_item"},
@@ -26,6 +30,6 @@ class Command(BaseCommand):
             )
             group.permissions.set(permissions)
             action = "created" if created else "updated"
-            self.stdout.write(self.style.SUCCESS(f"{action}: {role_name}"))
+            self.stdout.write(success_style(f"{action}: {role_name}"))
 
-        self.stdout.write(self.style.SUCCESS("Role bootstrap complete."))
+        self.stdout.write(success_style("Role bootstrap complete."))

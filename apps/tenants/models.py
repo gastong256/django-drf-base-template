@@ -19,7 +19,7 @@ class Tenant(models.Model):
         validators=[tenant_slug_validator],
     )
     name = models.CharField(max_length=255)
-    is_active = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True)  # pyright: ignore[reportArgumentType]
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -27,7 +27,7 @@ class Tenant(models.Model):
         ordering = ["slug"]
 
     def __str__(self) -> str:
-        return self.slug
+        return str(self.slug)
 
 
 class TenantScopedQuerySet(models.QuerySet):

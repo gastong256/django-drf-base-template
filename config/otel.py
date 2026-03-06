@@ -3,6 +3,8 @@ Optional OpenTelemetry setup. Enabled via OTEL_ENABLED=true env var.
 Install optional deps: uv sync --extra otel
 """
 
+# pyright: reportMissingImports=false
+
 import os
 
 

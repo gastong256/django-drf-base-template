@@ -1,3 +1,5 @@
+from typing import Any, cast
+
 from rest_framework import serializers
 
 from apps.accounts.models import User
@@ -12,4 +14,5 @@ class MeSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_roles(self, obj: User) -> list[str]:
-        return sorted(obj.groups.values_list("name", flat=True))
+        groups = cast(Any, obj.groups)
+        return sorted(groups.values_list("name", flat=True))

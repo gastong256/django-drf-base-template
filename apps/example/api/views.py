@@ -1,6 +1,8 @@
 import uuid
+from typing import Any, cast
 
 import structlog
+from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.exceptions import NotFound
@@ -17,7 +19,6 @@ from apps.accounts.permissions import (
 )
 from apps.example import selectors, services
 from apps.example.api.serializers import ItemCreateSerializer, ItemSerializer
-from apps.example.models import Item
 
 logger = structlog.get_logger(__name__)
 
@@ -52,8 +53,12 @@ class ItemCreateView(APIView):
     def post(self, request: Request) -> Response:
         serializer = ItemCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        payload = cast(dict[str, Any], serializer.validated_data)
 
-        item = services.create_item(**serializer.validated_data)
+        item = services.create_item(
+            name=str(payload["name"]),
+            description=str(payload.get("description", "")),
+        )
         logger.info("item_created", item_id=str(item.id), name=item.name)
 
         return Response(ItemSerializer(item).data, status=status.HTTP_201_CREATED)
@@ -75,7 +80,7 @@ class ItemDetailView(APIView):
     def get(self, request: Request, pk: uuid.UUID) -> Response:
         try:
             item = selectors.get_item(pk)
-        except Item.DoesNotExist as exc:
+        except ObjectDoesNotExist as exc:
             raise NotFound(detail="Item not found.") from exc
 
         return Response(ItemSerializer(item).data)

@@ -1,7 +1,9 @@
 import re
 from collections.abc import Callable
+from typing import Any, cast
 
 import structlog
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import DatabaseError
 from django.http import HttpRequest, HttpResponse, JsonResponse
 
@@ -82,8 +84,9 @@ class TenantMiddleware:
             )
 
         try:
-            tenant = Tenant.objects.only("id", "slug").get(slug=tenant_id, is_active=True)
-        except Tenant.DoesNotExist:
+            tenant_model = cast(Any, Tenant)
+            tenant = tenant_model.objects.only("id", "slug").get(slug=tenant_id, is_active=True)
+        except ObjectDoesNotExist:
             logger.warning("invalid_tenant_header", provided_tenant_id=tenant_id)
             return JsonResponse(
                 {

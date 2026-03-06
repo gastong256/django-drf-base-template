@@ -39,27 +39,28 @@ env = environ.Env(
     CELERY_MAX_TASKS_PER_CHILD=(int, 1000),
     CELERY_TASK_SOFT_TIME_LIMIT_SECONDS=(int, 300),
     CELERY_TASK_TIME_LIMIT_SECONDS=(int, 360),
+    DATABASE_URL=(str, "sqlite:///db.sqlite3"),
 )
 
 environ.Env.read_env(BASE_DIR / ".env", overwrite=False)
 
-SECRET_KEY = env("DJANGO_SECRET_KEY", default="unsafe-default-do-not-use-in-production")
-DEBUG = env("DJANGO_DEBUG")
-ALLOWED_HOSTS = env("DJANGO_ALLOWED_HOSTS")
-CORS_ALLOW_ALL_ORIGINS = env("CORS_ALLOW_ALL_ORIGINS")
-CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS")
-CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS")
-REDIS_URL = env("REDIS_URL")
-SERVICE_NAME = env("SERVICE_NAME")
-APP_ENV = env("APP_ENV")
-METRICS_ENABLED = env("METRICS_ENABLED")
-METRICS_ALLOWED_CIDRS = env("METRICS_ALLOWED_CIDRS")
-METRICS_TOKEN = env("METRICS_TOKEN")
+SECRET_KEY = env.str("DJANGO_SECRET_KEY", default="unsafe-default-do-not-use-in-production")
+DEBUG = env.bool("DJANGO_DEBUG")
+ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS")
+CORS_ALLOW_ALL_ORIGINS = env.bool("CORS_ALLOW_ALL_ORIGINS")
+CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS")
+CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS")
+REDIS_URL = env.str("REDIS_URL")
+SERVICE_NAME = env.str("SERVICE_NAME")
+APP_ENV = env.str("APP_ENV")
+METRICS_ENABLED = env.bool("METRICS_ENABLED")
+METRICS_ALLOWED_CIDRS = env.list("METRICS_ALLOWED_CIDRS")
+METRICS_TOKEN = env.str("METRICS_TOKEN")
 
-CELERY_BROKER_URL = env("CELERY_BROKER_URL", default=REDIS_URL or "redis://localhost:6379/0")
-CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default=CELERY_BROKER_URL)
-READINESS_CHECK_REDIS = env("READINESS_CHECK_REDIS")
-READINESS_REDIS_TIMEOUT_SECONDS = env("READINESS_REDIS_TIMEOUT_SECONDS")
+CELERY_BROKER_URL = env.str("CELERY_BROKER_URL", default=REDIS_URL or "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = env.str("CELERY_RESULT_BACKEND", default=CELERY_BROKER_URL)
+READINESS_CHECK_REDIS = env.bool("READINESS_CHECK_REDIS")
+READINESS_REDIS_TIMEOUT_SECONDS = env.int("READINESS_REDIS_TIMEOUT_SECONDS")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -114,18 +115,18 @@ WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
 DATABASES = {
-    "default": env.db("DATABASE_URL", default="sqlite:///db.sqlite3"),
+    "default": env.db("DATABASE_URL"),
 }
-DATABASES["default"]["CONN_MAX_AGE"] = env("DB_CONN_MAX_AGE")
-DATABASES["default"]["CONN_HEALTH_CHECKS"] = env("DB_CONN_HEALTH_CHECKS")
+DATABASES["default"]["CONN_MAX_AGE"] = env.int("DB_CONN_MAX_AGE")
+DATABASES["default"]["CONN_HEALTH_CHECKS"] = env.bool("DB_CONN_HEALTH_CHECKS")
 
 if "postgresql" in DATABASES["default"]["ENGINE"]:
     db_options = DATABASES["default"].setdefault("OPTIONS", {})
-    db_connect_timeout = env("DB_CONNECT_TIMEOUT_SECONDS")
+    db_connect_timeout = env.int("DB_CONNECT_TIMEOUT_SECONDS")
     if db_connect_timeout > 0:
         db_options.setdefault("connect_timeout", db_connect_timeout)
 
-    db_statement_timeout_ms = env("DB_STATEMENT_TIMEOUT_MS")
+    db_statement_timeout_ms = env.int("DB_STATEMENT_TIMEOUT_MS")
     if db_statement_timeout_ms > 0:
         statement_timeout_option = f"-c statement_timeout={db_statement_timeout_ms}"
         existing_options = db_options.get("options", "")
@@ -172,8 +173,8 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.UserRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
-        "anon": env("RATE_LIMIT_ANON"),
-        "user": env("RATE_LIMIT_USER"),
+        "anon": env.str("RATE_LIMIT_ANON"),
+        "user": env.str("RATE_LIMIT_USER"),
     },
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
@@ -187,8 +188,8 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=env("JWT_ACCESS_MINUTES")),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=env("JWT_REFRESH_DAYS")),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=env.int("JWT_ACCESS_MINUTES")),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=env.int("JWT_REFRESH_DAYS")),
     "AUTH_HEADER_TYPES": ("Bearer",),
     "UPDATE_LAST_LOGIN": False,
 }
@@ -198,10 +199,10 @@ CELERY_TASK_ACKS_LATE = True
 CELERY_TASK_REJECT_ON_WORKER_LOST = True
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
-CELERY_WORKER_CONCURRENCY = env("CELERY_CONCURRENCY")
-CELERY_WORKER_MAX_TASKS_PER_CHILD = env("CELERY_MAX_TASKS_PER_CHILD")
-CELERY_TASK_SOFT_TIME_LIMIT = env("CELERY_TASK_SOFT_TIME_LIMIT_SECONDS")
-CELERY_TASK_TIME_LIMIT = env("CELERY_TASK_TIME_LIMIT_SECONDS")
+CELERY_WORKER_CONCURRENCY = env.int("CELERY_CONCURRENCY")
+CELERY_WORKER_MAX_TASKS_PER_CHILD = env.int("CELERY_MAX_TASKS_PER_CHILD")
+CELERY_TASK_SOFT_TIME_LIMIT = env.int("CELERY_TASK_SOFT_TIME_LIMIT_SECONDS")
+CELERY_TASK_TIME_LIMIT = env.int("CELERY_TASK_TIME_LIMIT_SECONDS")
 CELERY_TASK_TRACK_STARTED = True
 
 SPECTACULAR_SETTINGS = {
@@ -213,7 +214,7 @@ SPECTACULAR_SETTINGS = {
     "SCHEMA_PATH_PREFIX": "/api/v[0-9]",
 }
 
-LOG_LEVEL = env("LOG_LEVEL")
+LOG_LEVEL = env.str("LOG_LEVEL")
 JSON_LOGS = env.bool("JSON_LOGS", default=True)
 configure_logging(
     log_level=LOG_LEVEL,

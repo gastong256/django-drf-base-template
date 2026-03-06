@@ -1,3 +1,5 @@
+# pyright: reportMissingImports=false
+
 import logging
 import re
 import sys
