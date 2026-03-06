@@ -14,6 +14,7 @@ if not SECRET_KEY or SECRET_KEY in _UNSAFE_DEFAULTS:
 
 DEBUG = False
 
+# Validation denylist for ALLOWED_HOSTS in production (not a bind operation).  # nosec B104
 _UNSAFE_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0"}
 if not ALLOWED_HOSTS or "*" in ALLOWED_HOSTS or set(ALLOWED_HOSTS).issubset(_UNSAFE_HOSTS):
     raise RuntimeError(

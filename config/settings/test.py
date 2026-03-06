@@ -3,8 +3,6 @@ import environ
 from .base import *  # noqa: F401, F403
 from .base import env
 
-SECRET_KEY = "test-secret-key-not-for-production"  # noqa: S105
-
 DEBUG = False
 
 test_database_url = env.str(
