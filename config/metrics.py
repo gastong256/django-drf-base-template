@@ -7,9 +7,9 @@ from django.http import Http404, HttpRequest, HttpResponse
 from drf_spectacular.utils import extend_schema
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
+    REGISTRY,
     Counter,
     Histogram,
-    REGISTRY,
     generate_latest,
 )
 from rest_framework.permissions import BasePermission
