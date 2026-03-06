@@ -84,7 +84,7 @@ pre-commit: ## Run pre-commit hooks against all files
 
 check-deploy: ## Run Django deploy checks with secure production defaults
 	DJANGO_SETTINGS_MODULE=config.settings.prod \
-	DJANGO_SECRET_KEY=check-deploy-secret-key \
+	DJANGO_SECRET_KEY=check-deploy-secret-key-2026-03-06-4f7a9c2d8e1b5a3c6d9f0e7a1b2c3d4e \
 	DJANGO_ALLOWED_HOSTS=api.example.com \
 	CSRF_TRUSTED_ORIGINS=https://api.example.com \
 	DATABASE_URL=postgres://postgres:postgres@localhost:5432/check_deploy \

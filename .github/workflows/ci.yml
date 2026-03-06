@@ -78,7 +78,7 @@ jobs:
       - name: Django deploy checks
         env:
           DJANGO_SETTINGS_MODULE: config.settings.prod
-          DJANGO_SECRET_KEY: ci-deploy-check-secret
+          DJANGO_SECRET_KEY: ci-deploy-check-secret-2026-03-06-4f7a9c2d8e1b5a3c6d9f0e7a1b2c3d4e
           DJANGO_ALLOWED_HOSTS: api.example.com
           CSRF_TRUSTED_ORIGINS: https://api.example.com
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/ci_db
